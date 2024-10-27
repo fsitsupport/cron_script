@@ -1,0 +1,82 @@
+#!usr/bin/env bash
+# sum_order_prices.sh
+#################################
+# Module 1 - Sum prices of orders
+#################################
+# put all order prices in one list in one file price_sum.txt
+# run this every day with crontab
+# integrate this with count daily
+# all files should be written and not pre-exist before.
+
+# create a variable to put the date in a filename to differenciate the files
+current_time=$(date +"%Y-%m-%d-%H-%M-%S")
+# set the variable for location of the order-files to grep stuff from 
+files=../orders/*.txt
+# variable for the files keeping the price_sum of that date
+price_sum_path=../import/price_sum_$current_time.txt
+# this if condition makes sure files exist to process
+if ! compgen -G "$files" > /dev/null; then
+    echo "Can't write, because there are no files to process."    
+else # grep exactly the price from the order-data for every existing order-file...
+    for i in ../orders/*.txt; do
+    	# and append that number to the file price_sum_<date>.txt (>>)
+        grep price "$i" | cut -d " " -f 2 >> ../import/price_sum_$current_time.txt;
+        # if 3 orders were taken a list of 3 numbers has been created in 1 file 
+        # and 3 times we can see the following promt in the console
+        echo "creating sum of * in $price_sum_path" 
+    done    
+fi
+
+#######################
+# Modul 2 - Count daily
+#######################
+# daily count of order income, count all numbers of price sum
+# run this with  "0 0 * * * <command>" in crontab
+# all files should be written and not pre-exist before.
+
+# set the location from where the files are that will be processed
+price_dir="../import"
+# set a variable to use in the following addition $((sum + number))
+sum=0
+# this for loop sums up all numbers that were greped in Modul 1
+# 'file' is the source of number added to the variable 'sum'
+# the in ... marks that values path and file location
+for file in ${price_dir}/price_sum_*.txt; do
+    # prompt which file is processed	
+    echo "processing $file..."
+    # Check if files according to pattern exist, if it is a flatfile (-f)
+    if [[ -f "$file" ]]; then
+    	# start a while loop that reads through the content of $file
+    	# which is e.g. <path>/price_sum_2024-10-03-10-30-15.txt 
+    	# number is used as variable to save the lines of $file
+    	# -r negates escape function of possible \ in $file
+        while read -r number; do
+        	# adds number to sum; the actual addition of daily income  
+        	# taking place
+            sum=$((sum + number))
+        # finishes the while loop; taking the content of $file as the read-input
+        # of thw while loop
+        done < "$file"
+        # some output
+        echo "processed sum of $file."
+    fi
+done
+
+# set path-VAR
+daily_income="$price_dir/daily_income_$current_time.txt"
+
+# if file doesn't exist, write the file. And if the file already exists write a new file.
+touch ../import/daily_income_$current_time.txt
+echo "At $current_time closing business with sum of $sum" >> ../import/daily_income_$current_time.txt
+echo "At $current_time closing business with sum of $sum in $daily_income"
+
+
+
+
+
+
+
+
+
+
+
